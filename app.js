@@ -12,7 +12,10 @@ socket.on("message", function (msg) {
 
 let mediaRecorder;
 let audioChunks = [];
-document.getElementById("record").addEventListener("click", function () {
+const recordButton = document.getElementById("record");
+const loadingIndicator = document.getElementById("loading");
+
+recordButton.addEventListener("mousedown", function () {
   navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
     mediaRecorder = new MediaRecorder(stream);
     mediaRecorder.start();
@@ -34,13 +37,19 @@ document.getElementById("record").addEventListener("click", function () {
         .then((data) => {
           console.log(data.text);
           socket.send(data.text); // Enviar el texto transcrito al chat
+          loadingIndicator.style.display = "none";
+          recordButton.disabled = false;
         });
 
       audioChunks = [];
     });
-
-    setTimeout(() => {
-      mediaRecorder.stop();
-    }, 5000); // Grabar por 5 segundos
   });
+});
+
+recordButton.addEventListener("mouseup", function () {
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+    loadingIndicator.style.display = "block";
+    recordButton.disabled = true;
+  }
 });
