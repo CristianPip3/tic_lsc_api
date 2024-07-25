@@ -1,13 +1,19 @@
 import io
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import whisper
 from pydub import AudioSegment
+from flask_socketio import SocketIO, send
 
 app = Flask(__name__)
 CORS(app)  # Habilita CORS para todas las rutas
+
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 model = whisper.load_model("medium")
+
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
@@ -35,5 +41,10 @@ def transcribe():
 
     return jsonify({'text': result['text']})
 
+@socketio.on('message')
+def handle_message(msg):
+    print('Message: ' + msg)
+    send(msg, broadcast=True)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)
