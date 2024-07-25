@@ -5,79 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Speech to Text Chat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f4f4f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        #chat-container {
-            width: 400px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        #chat-header {
-            background: #007bff;
-            color: #fff;
-            padding: 10px;
-            text-align: center;
-            font-size: 1.2em;
-        }
-        #chat {
-            border-top: 1px solid #ccc;
-            border-bottom: 1px solid #ccc;
-            padding: 10px;
-            height: 300px;
-            overflow-y: scroll;
-            background: #f9f9f9;
-            display: flex;
-            flex-direction: column;
-        }
-        .message {
-            padding: 8px 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-            max-width: 70%;
-        }
-        .message.sender {
-            background: #007bff;
-            color: #fff;
-            align-self: flex-end;
-        }
-        .message.receiver {
-            background: #e9ecef;
-            color: #000;
-            align-self: flex-start;
-        }
-        #record-container {
-            display: flex;
-            justify-content: center;
-            padding: 10px;
-        }
-        #record {
-            background: #007bff;
-            color: #fff;
-            border: none;
-            padding: 15px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 1em;
-            width: 60px;
-            height: 60px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        #record:hover {
-            background: #0056b3;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
 </head>
 <body>
     <div id="chat-container">
@@ -88,54 +17,5 @@
         </div>
     </div>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script>
-        var socket = io('http://127.0.0.1:5000');
-        var isSender = true;
-
-        socket.on('message', function(msg) {
-            var item = document.createElement('div');
-        item.textContent = msg;
-        item.classList.add('message');
-        item.classList.add(isSender ? 'sender' : 'receiver');
-        document.getElementById('chat').appendChild(item);
-        isSender = !isSender; // Alternar entre emisor y receptor
-        });
-
-        let mediaRecorder;
-        let audioChunks = [];
-        document.getElementById('record').addEventListener('click', function() {
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.start();
-
-                    mediaRecorder.addEventListener('dataavailable', event => {
-                        audioChunks.push(event.data);
-                    });
-
-                    mediaRecorder.addEventListener('stop', () => {
-                        const audioBlob = new Blob(audioChunks);
-                        const formData = new FormData();
-                        formData.append('audio', audioBlob);
-
-                        fetch('http://127.0.0.1:5000/transcribe', {
-                            method: 'POST',
-                            body: formData
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log(data.text);
-                            socket.send(data.text); // Enviar el texto transcrito al chat
-                        });
-
-                        audioChunks = [];
-                    });
-
-                    setTimeout(() => {
-                        mediaRecorder.stop();
-                    }, 5000); // Grabar por 5 segundos
-                });
-        });
-    </script>
 </body>
 </html>

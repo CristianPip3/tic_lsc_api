@@ -1,65 +1,46 @@
-const recordButton = document.getElementById("record");
-const chat = document.getElementById("chat");
+const socket = io("http://127.0.0.1:5000");
+let isSender = true;
+
+socket.on("message", function (msg) {
+  const item = document.createElement("div");
+  item.textContent = msg;
+  item.classList.add("message");
+  item.classList.add(isSender ? "sender" : "receiver");
+  document.getElementById("chat").appendChild(item);
+  isSender = !isSender; // Alternar entre emisor y receptor
+});
+
 let mediaRecorder;
 let audioChunks = [];
-let audioContext;
-let analyser;
-let dataArray;
-let bufferLength;
-let canvas;
-let canvasCtx;
+document.getElementById("record").addEventListener("click", function () {
+  navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.start();
 
-recordButton.addEventListener("click", () => {
-  if (mediaRecorder && mediaRecorder.state === "recording") {
-    mediaRecorder.stop();
-    recordButton.textContent = "Record";
-  } else {
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.start();
-        recordButton.textContent = "Stop";
+    mediaRecorder.addEventListener("dataavailable", (event) => {
+      audioChunks.push(event.data);
+    });
 
-        mediaRecorder.addEventListener('dataavailable', event => {
-            if (event.data.size > 0) {
-                audioChunks.push(event.data);
-            }
-        });
+    mediaRecorder.addEventListener("stop", () => {
+      const audioBlob = new Blob(audioChunks);
+      const formData = new FormData();
+      formData.append("audio", audioBlob);
 
-        mediaRecorder.addEventListener('stop', () => {
-            if (audioChunks.length > 0) {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const downloadLink = document.createElement('a');
-                downloadLink.href = audioUrl;
-                downloadLink.download = 'recording.wav';
-                downloadLink.textContent = 'Download recording';
-                document.body.appendChild(downloadLink);
-
-                const formData = new FormData();
-                formData.append('audio', audioBlob);
-
-                fetch('http://127.0.0.1:5000/transcribe', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log(data.text);
-                });
-
-                audioChunks = [];
-            } else {
-                console.error('No audio data available.');
-            }
-        });
-        setTimeout(() => {
-          mediaRecorder.stop();
-        }, 60000); // Grabar por 5 segundos
+      fetch("http://127.0.0.1:5000/transcribe", {
+        method: "POST",
+        body: formData,
       })
-      .catch((error) => {
-        console.error("Error accessing media devices.", error);
-      });
-  }
+        .then((response) => response.json())
+        .then((data) => {
+          console.log(data.text);
+          socket.send(data.text); // Enviar el texto transcrito al chat
+        });
+
+      audioChunks = [];
+    });
+
+    setTimeout(() => {
+      mediaRecorder.stop();
+    }, 5000); // Grabar por 5 segundos
+  });
 });
