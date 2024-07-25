@@ -14,7 +14,7 @@ CORS(app)  # Habilita CORS para todas las rutas
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-model = whisper.load_model("medium")
+model = whisper.load_model("base")
 
 @app.route('/generate_qr', methods=['GET'])
 def generate_qr():
